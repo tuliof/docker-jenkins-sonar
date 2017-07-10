@@ -1,40 +1,47 @@
 version: '2.1'
 services:
-    jenkins:
-        build: ./jenkins
-        ports:
-            - "8080:8080"
-            - "50000:50000"
-        networks:
-            - sonarnet
-    sonar:
-        image: sonarqube
-        ports:
-            - "9000:9000"
-        networks:
-            - sonarnet
-        environment:
-            - SONARQUBE_JDBC_USERNAME=sonar
-            - SONARQUBE_JDBC_PASSWORD=sonar
-            - SONARQUBE_JDBC_URL=jdbc:postgresql://db:5432/sonar
-    db:
-        image: postgres
-        networks:
-            - sonarnet
-        environment:
-            - POSTGRES_USER=sonar
-            - POSTGRES_PASSWORD=sonar
-        volumes:
-            - postgresql:/var/lib/postgresql
-            - postgresql_data:/var/lib/postgresql/data
-networks:
-    sonarnet:
-        driver: bridge
+  jenkins:
+    build: ./jenkins
+    volumes:
+      - ~/jenkins_home:/var/jenkins_home
+    ports:
+      - "8080:8080"
+      - "50000:50000"
+    networks:
+      - sonarnet
+    # Only to be able to run on play-with-docker.com, otherwise Jenkins will eat all the memory.
+#    environment:
+#      - JVM_OPTS=-Xmx1g -Xms512m
+    restart: always
+  sonar:
+    image: sonarqube:lts
+    ports:
+      - "9000:9000"
+      - "9092:9092"
+    networks:
+      - sonarnet
+    environment:
+      - SONARQUBE_JDBC_USERNAME=sonar
+      - SONARQUBE_JDBC_PASSWORD=sonar
+      - SONARQUBE_JDBC_URL=jdbc:postgresql://db:5432/sonar
+    volumes:
+      - ~/sonarqube/conf:/opt/sonarqube/conf
+      - ~/sonarqube/data:/opt/sonarqube/data
+      - ~/sonarqube/extensions:/opt/sonarqube/extensions
+      - ~/sonarqube/bundled-plugins:/opt/sonarqube/lib/bundled-plugins
+    restart: always
+  db:
+    image: postgres:9.6.3-alpine
+    networks:
+      - sonarnet
+    environment:
+      - POSTGRES_USER=sonar
+      - POSTGRES_PASSWORD=sonar
+    volumes:
+      - ~/postgresql:/var/lib/postgresql
+      - ~/postgresql/data:/var/lib/postgresql/data
+    restart: always
 
-volumes:
-    sonarqube_conf:
-    sonarqube_data:
-    sonarqube_extensions:
-    sonarqube_bundled-plugins:
-    postgresql:
-    postgresql_data:
+networks:
+  sonarnet:
+    driver: bridge
